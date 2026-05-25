@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Haus-Manager</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{
+            --bg:#fff;--bg2:#f5f5f2;--bg3:#ebebea;
+            --text:#1a1a1a;--text2:#6b6b68;--text3:#9a9a96;
+            --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+            --blue:#185fa5;--blue-bg:#e6f1fb;--blue-text:#0c447c;
+            --green:#3b6d11;--green-bg:#eaf3de;--green-text:#27500a;
+            --red:#a32d2d;--red-bg:#fcebeb;--red-text:#791f1f;
+            --amber:#854f0b;--amber-bg:#faeeda;--amber-text:#633806;
+            --r:8px;--rl:12px;
+        }
+        @media(prefers-color-scheme:dark){:root{
+            --bg:#1e1e1e;--bg2:#272727;--bg3:#313131;
+            --text:#f0f0ee;--text2:#a0a09a;--text3:#666662;
+            --border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22);
+            --blue:#378add;--blue-bg:#042c53;--blue-text:#b5d4f4;
+            --green:#639922;--green-bg:#173404;--green-text:#c0dd97;
+            --red:#e24b4a;--red-bg:#501313;--red-text:#f7c1c1;
+            --amber:#ef9f27;--amber-bg:#412402;--amber-text:#fac775;
+        }}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg2);color:var(--text);min-height:100vh}
+
+        /* ── Layout ── */
+        .shell{display:flex;height:100vh;overflow:hidden}
+        .sidebar{width:280px;min-width:280px;background:var(--bg);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+        .main{flex:1;overflow-y:auto;padding:1.5rem}
+
+        /* ── Sidebar ── */
+        .sb-head{padding:1rem 1rem 0.75rem;border-bottom:0.5px solid var(--border)}
+        .sb-head h1{font-size:16px;font-weight:500;display:flex;align-items:center;gap:6px}
+        .sb-nav{flex:1;overflow-y:auto;padding:0.5rem 0}
+        .nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:14px;color:var(--text2);border-left:2px solid transparent;transition:all 0.1s}
+        .nav-item:hover{background:var(--bg2);color:var(--text)}
+        .nav-item.active{background:var(--blue-bg);color:var(--blue-text);border-left-color:var(--blue);font-weight:500}
+        .nav-item i{font-size:16px;flex-shrink:0}
+        .nav-sub{padding-left:28px}
+        .nav-sub .nav-item{font-size:13px;padding:5px 10px}
+        .nav-group-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);padding:10px 14px 4px}
+        .sb-footer{padding:0.75rem 1rem;border-top:0.5px solid var(--border)}
+
+        /* ── Buttons ── */
+        button{font-family:inherit;font-size:14px;cursor:pointer;border-radius:var(--r);border:0.5px solid var(--border2);background:transparent;color:var(--text);padding:6px 12px;display:inline-flex;align-items:center;gap:6px;transition:background 0.1s}
+        button:hover{background:var(--bg2)}
+        button:active{transform:scale(0.98)}
+        button.primary{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
+        button.primary:hover{opacity:0.85}
+        button.danger{background:var(--red-bg);color:var(--red-text);border-color:var(--red)}
+        button.small{font-size:12px;padding:4px 8px}
+        button.icon-btn{padding:5px 7px;border-radius:var(--r)}
+
+        /* ── Inputs ── */
+        input[type=text],input[type=number],select,textarea{font-family:inherit;font-size:14px;background:var(--bg);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--r);padding:7px 10px;width:100%}
+        input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px var(--blue)}
+        input[type=number]{width:80px}
+        label{font-size:13px;color:var(--text2);display:block;margin-bottom:4px}
+        .field{margin-bottom:1rem}
+
+        /* ── Cards ── */
+        .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1.25rem}
+        .card+.card{margin-top:1rem}
+        .card-title{font-size:16px;font-weight:500;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+
+        /* ── Page header ── */
+        .page-header{margin-bottom:1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+        .page-header h2{font-size:20px;font-weight:500}
+        .page-header p{font-size:13px;color:var(--text2);margin-top:2px}
+
+        /* ── House SVG wrapper ── */
+        .house-wrap{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1.25rem;overflow-x:auto}
+        #house-svg{display:block;margin:0 auto}
+
+        /* ── Floor/Room grid ── */
+        .floor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:0.5px solid var(--border)}
+        .floor-header h3{font-size:15px;font-weight:500}
+        .rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1rem}
+        .room-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:border-color 0.15s}
+        .room-card:hover{border-color:var(--border2)}
+        .room-card.active{border:2px solid var(--blue);background:var(--blue-bg)}
+        .room-card .room-name{font-size:14px;font-weight:500;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+        .room-card .room-meta{font-size:12px;color:var(--text2)}
+        .todo-done{color:var(--green);font-size:12px}
+        .todo-open{color:var(--amber);font-size:12px}
+
+        /* ── Todo list ── */
+        .todo-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+        .todo-item:last-child{border-bottom:none}
+        .todo-check{width:16px;height:16px;cursor:pointer;margin-top:2px;flex-shrink:0;accent-color:var(--blue)}
+        .todo-text{flex:1;font-size:14px;line-height:1.4}
+        .todo-text.done{text-decoration:line-through;color:var(--text3)}
+        .todo-del{font-size:14px;color:var(--text3);cursor:pointer;padding:2px 4px;border-radius:4px;border:none;background:transparent}
+        .todo-del:hover{color:var(--red);background:var(--red-bg)}
+        .todo-add{display:flex;gap:8px;margin-top:0.75rem}
+        .todo-add input{flex:1}
+
+        /* ── Badge ── */
+        .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:100px;display:inline-flex;align-items:center;gap:3px}
+        .badge-blue{background:var(--blue-bg);color:var(--blue-text)}
+        .badge-green{background:var(--green-bg);color:var(--green-text)}
+        .badge-amber{background:var(--amber-bg);color:var(--amber-text)}
+
+        /* ── Setup form ── */
+        .setup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}
+
+        /* ── Responsive ── */
+        @media(max-width:600px){
+            .shell{flex-direction:column;height:auto}
+            .sidebar{width:100%;min-width:0;height:auto;border-right:none;border-bottom:0.5px solid var(--border)}
+            .sb-nav{max-height:200px}
+            .main{padding:1rem}
+        }
+    </style>
+</head>
+<body>
+
+<div id="layout-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--rl);padding:1.25rem;width:100%;max-width:600px;max-height:80vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <span style="font-size:16px;font-weight:500">Grundriss-Layout anpassen</span>
+            <button class="icon-btn" onclick="document.getElementById('layout-modal').style.display='none'" aria-label="Schließen"><i class="ti ti-x"></i></button>
+        </div>
+        <div id="layout-modal-body"></div>
+    </div>
+</div>
+
+<div class="shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sb-head">
+            <h1><i class="ti ti-building" aria-hidden="true" style="font-size:18px"></i><span id="sb-building-name">Mein Haus</span></h1>
+        </div>
+        <nav class="sb-nav" id="sidebar-nav"></nav>
+        <div class="sb-footer">
+            <button onclick="showView('setup')" style="width:100%"><i class="ti ti-settings" aria-hidden="true"></i>Haus konfigurieren</button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main" id="main-content">
+        <div style="text-align:center;padding:4rem 1rem;color:var(--text2)">
+            <i class="ti ti-building" style="font-size:48px;display:block;margin-bottom:1rem;color:var(--text3)"></i>
+            <p>Konfiguriere zuerst dein Haus über den Button unten links.</p>
+            <button onclick="showView('setup')" class="primary" style="margin-top:1rem"><i class="ti ti-settings"></i>Jetzt einrichten</button>
+        </div>
+    </main>
+</div>
+
+<script>
+    /* ════════════════════════════════
+       STATE
+    ════════════════════════════════ */
+    let state = loadState() || {
+        building: {
+            name: 'Mein Haus',
+            floors: 3,
+            hasAttic: false,
+            hasBasement: false,
+            hasGarage: false,
+            roofType: 'gable',
+        },
+        apartments: {},
+        rooms: {},
+        todos: {}
+    };
+
+    function loadState() {
+        try { return JSON.parse(localStorage.getItem('haus-manager-v1')); } catch(e){ return null; }
+    }
+    function saveState() {
+        localStorage.setItem('haus-manager-v1', JSON.stringify(state));
+    }
+
+    /* ════════════════════════════════
+       ROOM ICONS
+    ════════════════════════════════ */
+    const ROOM_ICONS = {
+        wohnzimmer: 'ti-sofa',
+        schlafzimmer: 'ti-bed',
+        kueche: 'ti-tools-kitchen-2',
+        bad: 'ti-bath',
+        kinderzimmer: 'ti-mood-kid',
+        buero: 'ti-device-laptop',
+        keller: 'ti-stairs-down',
+        dachboden: 'ti-stairs-up',
+        garage: 'ti-car',
+        flur: 'ti-door',
+        esszimmer: 'ti-table',
+        abstellraum: 'ti-archive',
+        sonstiges: 'ti-home',
+    };
+    const DEFAULT_ROOMS = ['Wohnzimmer','Schlafzimmer','Küche','Bad','Flur'];
+    function roomIcon(name) {
+        const lc = name.toLowerCase().replace(/ü/g,'ue').replace(/ä/g,'ae').replace(/ö/g,'oe');
+        for (const [k,v] of Object.entries(ROOM_ICONS)) {
+            if (lc.includes(k.replace(/ue/g,'ü').replace(/ae/g,'ä'))) return v;
+            if (lc.includes(k)) return v;
+        }
+        return 'ti-home';
+    }
+
+    /* ════════════════════════════════
+       IDS
+    ════════════════════════════════ */
+    let uid = Date.now();
+    function nextId() { return 'id' + (++uid); }
+
+    /* ════════════════════════════════
+       NAVIGATION STATE
+    ════════════════════════════════ */
+    let currentView = 'overview';
+    let selectedFloor = null;
+    let selectedRoom = null;
+
+    /* ════════════════════════════════
+       SIDEBAR
+    ════════════════════════════════ */
+    function buildSidebar() {
+        document.getElementById('sb-building-name').textContent = state.building.name;
+        const nav = document.getElementById('sidebar-nav');
+        nav.innerHTML = '';
+
+        const b = state.building;
+        const totalFloors = b.floors + (b.hasAttic ? 1 : 0) + (b.hasBasement ? 1 : 0);
+
+        addNavItem(nav, 'Übersicht', 'ti-layout-dashboard', 'overview');
+        addNavItem(nav, 'Hauszeichnung', 'ti-building', 'drawing');
+
+        if (totalFloors > 0) {
+            const label = document.createElement('div');
+            label.className = 'nav-group-label';
+            label.textContent = 'Etagen';
+            nav.appendChild(label);
+
+            const floorIds = getFloorIds();
+            for (const fid of floorIds) {
+                const apt = state.apartments[fid] || {};
+                addNavItem(nav, apt.name || floorLabel(fid), 'ti-home', 'floor:' + fid, true);
+            }
+        }
+    }
+
+    function addNavItem(nav, label, icon, view, sub=false) {
+        const el = document.createElement('div');
+        el.className = 'nav-item' + (sub ? ' nav-sub' : '');
+        if (currentView === view) el.classList.add('active');
+        el.innerHTML = `<i class="ti ${icon}" aria-hidden="true"></i><span>${label}</span>`;
+        el.onclick = () => showView(view);
+        nav.appendChild(el);
+    }
+
+    /* ════════════════════════════════
+       FLOOR IDs — ordered top→bottom
+    ════════════════════════════════ */
+    function getFloorIds() {
+        const b = state.building;
+        const ids = [];
+        if (b.hasAttic) ids.push('attic');
+        for (let i = b.floors - 1; i >= 0; i--) ids.push('floor_' + i);
+        if (b.hasBasement) ids.push('basement');
+        return ids;
+    }
+
+    function floorLabel(fid) {
+        if (fid === 'attic') return 'Dachboden';
+        if (fid === 'basement') return 'Keller';
+        const n = parseInt(fid.split('_')[1]);
+        if (n === 0) return 'Erdgeschoss';
+        return n + '. Obergeschoss';
+    }
+
+    /* ════════════════════════════════
+       ENSURE APARTMENT EXISTS
+    ════════════════════════════════ */
+    function ensureApt(fid) {
+        if (!state.apartments[fid]) {
+            state.apartments[fid] = { name: floorLabel(fid), rooms: [] };
+        }
+        if (!state.apartments[fid].rooms) state.apartments[fid].rooms = [];
+    }
+
+    function ensureRoom(rid) {
+        if (!state.rooms[rid]) state.rooms[rid] = { name: 'Raum', size: '' };
+        if (!state.todos[rid]) state.todos[rid] = [];
+    }
+
+    /* ════════════════════════════════
+       VIEW ROUTER
+    ════════════════════════════════ */
+    function showView(view) {
+        currentView = view;
+        buildSidebar();
+        const main = document.getElementById('main-content');
+
+        if (view === 'setup')    { renderSetup(main); return; }
+        if (view === 'overview') { renderOverview(main); return; }
+        if (view === 'drawing')  { renderDrawing(main); return; }
+        if (view.startsWith('floor:')) {
+            selectedFloor = view.split(':')[1];
+            selectedRoom = null;
+            renderFloor(main, selectedFloor);
+            return;
+        }
+    }
+
+    /* ════════════════════════════════
+       SETUP VIEW
+    ════════════════════════════════ */
+    function renderSetup(main) {
+        const b = state.building;
+        main.innerHTML = `
+    <div class="page-header">
+      <div><h2>Haus konfigurieren</h2><p>Grundstruktur deines Gebäudes festlegen</p></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-building" aria-hidden="true"></i>Allgemein</div>
+      <div class="setup-grid">
+        <div class="field"><label>Gebäudename</label><input type="text" id="cfg-name" value="${esc(b.name)}"/></div>
+        <div class="field"><label>Anzahl Etagen (ohne Keller/Dach)</label><input type="number" id="cfg-floors" value="${b.floors}" min="1" max="20" style="width:80px"/></div>
+        <div class="field"><label>Dachform</label>
+          <select id="cfg-roof">
+            <option value="gable" ${b.roofType==='gable'?'selected':''}>Satteldach</option>
+            <option value="flat" ${b.roofType==='flat'?'selected':''}>Flachdach</option>
+            <option value="hip" ${b.roofType==='hip'?'selected':''}>Walmdach</option>
+          </select>
+        </div>
+      </div>
+      <div class="setup-grid">
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="cfg-attic" ${b.hasAttic?'checked':''} style="width:auto"/>
+            Dachboden vorhanden
+          </label>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="cfg-basement" ${b.hasBasement?'checked':''} style="width:auto"/>
+            Keller vorhanden
+          </label>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="cfg-garage" ${b.hasGarage?'checked':''} style="width:auto"/>
+            Garage vorhanden
+          </label>
+        </div>
+      </div>
+      <button class="primary" onclick="applySetup()"><i class="ti ti-check"></i>Speichern & anwenden</button>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title"><i class="ti ti-home" aria-hidden="true"></i>Etagen umbenennen</div>
+      <div id="floor-names-cfg"></div>
+    </div>
+  `;
+        renderFloorNamesCfg();
+    }
+
+    function renderFloorNamesCfg() {
+        const div = document.getElementById('floor-names-cfg');
+        if (!div) return;
+        const ids = getFloorIds();
+        if (ids.length === 0) { div.innerHTML = '<p style="color:var(--text2);font-size:14px">Noch keine Etagen konfiguriert.</p>'; return; }
+        div.innerHTML = ids.map(fid => {
+            ensureApt(fid);
+            return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:13px;color:var(--text2);width:140px;flex-shrink:0">${floorLabel(fid)}</span>
+      <input type="text" id="fname-${fid}" value="${esc(state.apartments[fid].name)}" placeholder="Name der Wohnung/Etage"/>
+    </div>`;
+        }).join('') + `<button class="primary" style="margin-top:0.5rem" onclick="saveFloorNames()"><i class="ti ti-check"></i>Namen speichern</button>`;
+    }
+
+    function saveFloorNames() {
+        for (const fid of getFloorIds()) {
+            const el = document.getElementById('fname-' + fid);
+            if (el) { ensureApt(fid); state.apartments[fid].name = el.value || floorLabel(fid); }
+        }
+        saveState(); buildSidebar();
+        showToast('Namen gespeichert');
+    }
+
+    function applySetup() {
+        const b = state.building;
+        b.name      = document.getElementById('cfg-name').value || 'Mein Haus';
+        b.floors    = Math.max(1, parseInt(document.getElementById('cfg-floors').value) || 1);
+        b.roofType  = document.getElementById('cfg-roof').value;
+        b.hasAttic  = document.getElementById('cfg-attic').checked;
+        b.hasBasement = document.getElementById('cfg-basement').checked;
+        b.hasGarage = document.getElementById('cfg-garage').checked;
+        saveState();
+        for (const fid of getFloorIds()) ensureApt(fid);
+        saveState(); buildSidebar();
+        renderFloorNamesCfg();
+        showToast('Haus konfiguriert!');
+    }
+
+    /* ════════════════════════════════
+       OVERVIEW VIEW
+    ════════════════════════════════ */
+    function renderOverview(main) {
+        const b = state.building;
+        const fids = getFloorIds();
+        let totalRooms = 0, totalTodos = 0, doneTodos = 0;
+        for (const fid of fids) {
+            ensureApt(fid);
+            for (const rid of (state.apartments[fid].rooms || [])) {
+                totalRooms++;
+                const todos = state.todos[rid] || [];
+                totalTodos += todos.length;
+                doneTodos  += todos.filter(t=>t.done).length;
+            }
+        }
+
+        main.innerHTML = `
+    <div class="page-header">
+      <div><h2>${esc(b.name)}</h2><p>${fids.length} Etage(n) · ${totalRooms} Räume</p></div>
+      <button onclick="showView('drawing')" class="primary"><i class="ti ti-building"></i>Hauszeichnung</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:1.5rem">
+      ${statCard('Etagen', fids.length, 'ti-layers')}
+      ${statCard('Räume', totalRooms, 'ti-door')}
+      ${statCard('Aufgaben offen', totalTodos - doneTodos, 'ti-circle-check')}
+      ${statCard('Erledigt', doneTodos, 'ti-checks')}
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-layout-list" aria-hidden="true"></i>Alle Etagen</div>
+      ${fids.length === 0 ? '<p style="color:var(--text2);font-size:14px">Noch keine Etagen. Haus konfigurieren.</p>' :
+            fids.map(fid => {
+                ensureApt(fid);
+                const apt = state.apartments[fid];
+                const rooms = apt.rooms || [];
+                const open = rooms.reduce((s,r) => s + (state.todos[r]||[]).filter(t=>!t.done).length, 0);
+                return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="showView('floor:${fid}')">
+            <i class="ti ti-home" style="font-size:18px;color:var(--text2)" aria-hidden="true"></i>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:500">${esc(apt.name)}</div>
+              <div style="font-size:12px;color:var(--text2)">${rooms.length} Räume${open > 0 ? ` · <span style="color:var(--amber)">${open} offene Aufgaben</span>` : ''}</div>
+            </div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)" aria-hidden="true"></i>
+          </div>`;
+            }).join('')}
+    </div>`;
+    }
+
+    function statCard(label, val, icon) {
+        return `<div style="background:var(--bg3);border-radius:var(--r);padding:1rem">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px;display:flex;align-items:center;gap:4px"><i class="ti ${icon}" style="font-size:14px" aria-hidden="true"></i>${label}</div>
+    <div style="font-size:24px;font-weight:500">${val}</div>
+  </div>`;
+    }
+
+    /* ════════════════════════════════
+       DRAWING VIEW
+    ════════════════════════════════ */
+    function renderDrawing(main) {
+        const b = state.building;
+        main.innerHTML = `
+    <div class="page-header">
+      <div><h2>Hauszeichnung</h2><p>${esc(b.name)}</p></div>
+    </div>
+    <div class="house-wrap">
+      ${drawHouse()}
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-top:0.75rem;text-align:center">Klick auf eine Etage zum Navigieren</p>`;
+    }
+
+    function drawHouse() {
+        const b = state.building;
+        const W = 500, FLOOR_H = 60, WALL_W = 300;
+        const x0 = (W - WALL_W) / 2;
+        const totalMain = b.floors;
+        const hasAttic = b.hasAttic, hasBasement = b.hasBasement, hasGarage = b.hasGarage;
+
+        let roofH = 80;
+        if (b.roofType === 'flat') roofH = 20;
+        if (b.roofType === 'hip') roofH = 70;
+
+        const mainH = totalMain * FLOOR_H;
+        const basementH = hasBasement ? FLOOR_H : 0;
+        const atticH = hasAttic ? FLOOR_H : 0;
+        const garageW = hasGarage ? 100 : 0;
+        const garageH = hasGarage ? FLOOR_H * 1.5 : 0;
+
+        const totalH = roofH + atticH + mainH + basementH + 40;
+
+        let svg = `<svg id="house-svg" viewBox="0 0 ${W} ${totalH + 20}" width="${W}" height="${totalH + 20}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hauszeichnung ${esc(b.name)}">`;
+
+        const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+        const wallFill   = isDark ? '#2a2a2a' : '#f8f7f4';
+        const wallStroke = isDark ? '#555553' : '#b4b2a9';
+        const roofFill   = isDark ? '#3c3434' : '#d4c8c0';
+        const roofStroke = isDark ? '#888780' : '#888780';
+        const winFill    = isDark ? '#042c53' : '#e6f1fb';
+        const winStroke  = isDark ? '#378add' : '#185fa5';
+        const doorFill   = isDark ? '#3c3434' : '#d3c8be';
+        const textCol    = isDark ? '#f0f0ee' : '#1a1a1a';
+        const textMuted  = isDark ? '#a0a09a' : '#6b6b68';
+        const groundFill = isDark ? '#313131' : '#e8e6e0';
+        const garageFill = isDark ? '#242424' : '#f0ede8';
+
+        const roofTop = 20;
+        const atticY  = roofTop + roofH;
+        const mainY   = atticY + atticH;
+        const baseY   = mainY + mainH;
+        const groundY = baseY + basementH;
+
+        /* ground */
+        svg += `<rect x="0" y="${groundY}" width="${W}" height="20" fill="${groundFill}"/>`;
+
+        /* garage */
+        if (hasGarage) {
+            const gx = x0 + WALL_W + 4;
+            const gy = groundY - garageH;
+            svg += `<rect x="${gx}" y="${gy}" width="${garageW}" height="${garageH}" fill="${garageFill}" stroke="${wallStroke}" stroke-width="1"/>`;
+            svg += `<rect x="${gx+10}" y="${gy+garageH-garageH*0.55}" width="${garageW-20}" height="${garageH*0.5}" fill="${doorFill}" stroke="${wallStroke}" stroke-width="1" rx="3"/>`;
+            svg += `<text x="${gx+garageW/2}" y="${gy+12}" text-anchor="middle" font-size="10" fill="${textMuted}" font-family="sans-serif">Garage</text>`;
+        }
+
+        /* basement */
+        if (hasBasement) {
+            const fid = 'basement';
+            svg += floorRect(x0, baseY, WALL_W, FLOOR_H, wallFill, wallStroke, fid);
+            svg += floorLabel2(x0, baseY, WALL_W, FLOOR_H, 'Keller', getAptName(fid), textCol, textMuted, fid);
+            svg += floorWindows(x0, baseY, WALL_W, FLOOR_H, winFill, winStroke, 1);
+        }
+
+        /* main floors */
+        for (let i = 0; i < totalMain; i++) {
+            const floorIdx = totalMain - 1 - i;
+            const fid = 'floor_' + floorIdx;
+            const fy = mainY + i * FLOOR_H;
+            const isGround = floorIdx === 0;
+            svg += floorRect(x0, fy, WALL_W, FLOOR_H, wallFill, wallStroke, fid);
+            svg += floorLabel2(x0, fy, WALL_W, FLOOR_H, floorIdx === 0 ? 'EG' : floorIdx + '. OG', getAptName(fid), textCol, textMuted, fid);
+            if (isGround) {
+                const doorW = 24, doorH = 38;
+                const dx = x0 + WALL_W/2 - doorW/2;
+                svg += `<rect x="${dx}" y="${fy + FLOOR_H - doorH}" width="${doorW}" height="${doorH}" fill="${doorFill}" stroke="${wallStroke}" stroke-width="1" rx="2"/>`;
+                svg += `<circle cx="${dx+doorW-5}" cy="${fy+FLOOR_H-doorH/2}" r="2" fill="${wallStroke}"/>`;
+                svg += floorWindows(x0, fy, WALL_W, FLOOR_H, winFill, winStroke, 2, true);
+            } else {
+                svg += floorWindows(x0, fy, WALL_W, FLOOR_H, winFill, winStroke, 2);
+            }
+        }
+
+        /* attic floor */
+        if (hasAttic) {
+            svg += floorRect(x0, atticY, WALL_W, FLOOR_H, wallFill, wallStroke, 'attic');
+            svg += floorLabel2(x0, atticY, WALL_W, FLOOR_H, 'DG', getAptName('attic'), textCol, textMuted, 'attic');
+            svg += floorWindows(x0, atticY, WALL_W, FLOOR_H, winFill, winStroke, 1);
+        }
+
+        /* roof */
+        const roofBase = atticY;
+        const cx = W / 2;
+        if (b.roofType === 'flat') {
+            svg += `<rect x="${x0-5}" y="${roofBase - roofH}" width="${WALL_W+10}" height="${roofH}" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1.5"/>`;
+        } else if (b.roofType === 'gable') {
+            svg += `<polygon points="${cx},${roofTop} ${x0-10},${roofBase} ${x0+WALL_W+10},${roofBase}" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1.5"/>`;
+        } else {
+            svg += `<polygon points="${cx},${roofTop+15} ${x0+40},${roofBase} ${x0+WALL_W-40},${roofBase}" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1.5"/>`;
+            svg += `<polygon points="${cx},${roofTop+15} ${x0-10},${roofBase-10} ${x0+40},${roofBase}" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1"/>`;
+            svg += `<polygon points="${cx},${roofTop+15} ${x0+WALL_W+10},${roofBase-10} ${x0+WALL_W-40},${roofBase}" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1"/>`;
+        }
+
+        /* chimney */
+        svg += `<rect x="${cx+40}" y="${roofTop+5}" width="16" height="30" fill="${roofFill}" stroke="${roofStroke}" stroke-width="1"/>`;
+
+        svg += '</svg>';
+        return svg;
+    }
+
+    function floorRect(x, y, w, h, fill, stroke, fid) {
+        return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="1" style="cursor:pointer" onclick="showView('floor:${fid}')"/>`;
+    }
+    function floorLabel2(x, y, w, h, short, name, textCol, textMuted, fid) {
+        return `<text x="${x+w/2}" y="${y+h/2-5}" text-anchor="middle" font-size="13" font-weight="500" fill="${textCol}" font-family="sans-serif" style="cursor:pointer" onclick="showView('floor:${fid}')">${esc(short)}</text>
+  <text x="${x+w/2}" y="${y+h/2+11}" text-anchor="middle" font-size="10" fill="${textMuted}" font-family="sans-serif" style="cursor:pointer" onclick="showView('floor:${fid}')">${esc(name)}</text>`;
+    }
+    function floorWindows(x, y, w, h, fill, stroke, count, skipCenter=false) {
+        let s = '';
+        const ww = 20, wh = 20;
+        const positions = count === 1
+            ? [w * 0.25, w * 0.75]
+            : [w * 0.15, w * 0.85];
+        for (const px of positions) {
+            if (skipCenter && Math.abs(px - w/2) < w*0.25) continue;
+            s += `<rect x="${x+px-ww/2}" y="${y+h/2-wh/2}" width="${ww}" height="${wh}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`;
+            s += `<line x1="${x+px}" y1="${y+h/2-wh/2}" x2="${x+px}" y2="${y+h/2+wh/2}" stroke="${stroke}" stroke-width="0.8"/>`;
+            s += `<line x1="${x+px-ww/2}" y1="${y+h/2}" x2="${x+px+ww/2}" y2="${y+h/2}" stroke="${stroke}" stroke-width="0.8"/>`;
+        }
+        return s;
+    }
+    function getAptName(fid) {
+        return (state.apartments[fid] && state.apartments[fid].name) ? state.apartments[fid].name : floorLabel(fid);
+    }
+
+    /* ════════════════════════════════
+       FLOOR PLAN DRAWING
+    ════════════════════════════════ */
+
+    const PLAN_W = 560, PLAN_H = 320;
+    const GRID = 20;
+    const ROOM_COLORS = [
+        ['#e6f1fb','#185fa5','#0c447c'],
+        ['#eaf3de','#3b6d11','#27500a'],
+        ['#faeeda','#854f0b','#633806'],
+        ['#fbeaf0','#993556','#72243e'],
+        ['#f1efeb','#5f5e5a','#444441'],
+        ['#e1f5ee','#0f6e56','#085041'],
+    ];
+    const ROOM_COLORS_DARK = [
+        ['#042c53','#378add','#b5d4f4'],
+        ['#173404','#639922','#c0dd97'],
+        ['#412402','#ef9f27','#fac775'],
+        ['#4b1528','#d4537e','#f4c0d1'],
+        ['#2c2c2a','#888780','#d3d1c7'],
+        ['#04342c','#1d9e75','#9fe1cb'],
+    ];
+
+    function getDefaultLayout(rooms) {
+        const n = rooms.length;
+        if (n === 0) return {};
+        const cols = Math.ceil(Math.sqrt(n));
+        const rows = Math.ceil(n / cols);
+        const cellW = Math.floor((PLAN_W - 40) / cols / GRID) * GRID;
+        const cellH = Math.floor((PLAN_H - 40) / rows / GRID) * GRID;
+        const layout = {};
+        rooms.forEach((rid, i) => {
+            const col = i % cols, row = Math.floor(i / cols);
+            const x = 20 + col * cellW, y = 20 + row * cellH;
+            layout[rid] = {
+                points: [[x,y],[x+cellW,y],[x+cellW,y+cellH],[x,y+cellH]]
+            };
+        });
+        return layout;
+    }
+
+    /* Convert old rect-based layout entry to polygon if needed */
+    function migrateLayoutEntry(l) {
+        if (l && l.points) return l;
+        if (l && l.w !== undefined) {
+            const {x,y,w,h} = l;
+            return { points: [[x,y],[x+w,y],[x+w,y+h],[x,y+h]] };
+        }
+        return { points: [[20,20],[140,20],[140,120],[20,120]] };
+    }
+
+    /* Bounding box of a polygon (for label centering etc.) */
+    function polyBBox(pts) {
+        const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+        const x = Math.min(...xs), y = Math.min(...ys);
+        return { x, y, w: Math.max(...xs)-x, h: Math.max(...ys)-y,
+            cx: (Math.min(...xs)+Math.max(...xs))/2,
+            cy: (Math.min(...ys)+Math.max(...ys))/2 };
+    }
+
+    /* Translate all points by dx,dy */
+    function polyTranslate(pts, dx, dy) {
+        return pts.map(([px,py]) => [Math.round(px+dx), Math.round(py+dy)]);
+    }
+
+    function ensureLayout(fid) {
+        const apt = state.apartments[fid];
+        if (!apt.layout) apt.layout = {};
+        const rooms = apt.rooms || [];
+        const missing = rooms.filter(r => !apt.layout[r]);
+        if (missing.length > 0) {
+            const def = getDefaultLayout(rooms);
+            for (const rid of missing) {
+                apt.layout[rid] = def[rid] || { points: [[20,20],[140,20],[140,120],[20,120]] };
+            }
+        }
+        // Migrate old rect-based entries
+        for (const rid of rooms) {
+            if (apt.layout[rid]) apt.layout[rid] = migrateLayoutEntry(apt.layout[rid]);
+        }
+        for (const rid of Object.keys(apt.layout)) {
+            if (!rooms.includes(rid)) delete apt.layout[rid];
+        }
+    }
+
+    function drawFloorPlan(fid) {
+        ensureApt(fid);
+        ensureLayout(fid);
+        const apt = state.apartments[fid];
+        const rooms = apt.rooms || [];
+        const layout = apt.layout;
+        const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+
+        const wallFill   = isDark ? '#232323' : '#f9f8f5';
+        const wallBorder = isDark ? '#444441' : '#8a8880';
+        const textSec    = isDark ? '#a0a09a' : '#6b6b68';
+
+        let svg = `<svg id="floor-plan-svg" viewBox="0 0 ${PLAN_W} ${PLAN_H}" width="${PLAN_W}" height="${PLAN_H}" xmlns="http://www.w3.org/2000/svg" style="touch-action:none;user-select:none">`;
+        svg += `<rect width="${PLAN_W}" height="${PLAN_H}" fill="${wallFill}" stroke="${wallBorder}" stroke-width="2" rx="4"/>`;
+
+        rooms.forEach((rid, idx) => {
+            ensureRoom(rid);
+            const r = state.rooms[rid];
+            const l = layout[rid];
+            if (!l || !l.points) return;
+            const pts = l.points;
+            const ci = idx % ROOM_COLORS.length;
+            const [bg, border, labelCol] = isDark ? ROOM_COLORS_DARK[ci] : ROOM_COLORS[ci];
+            const todos = state.todos[rid] || [];
+            const open  = todos.filter(t => !t.done).length;
+            const isSelected = selectedRoom === rid;
+            const bb = polyBBox(pts);
+            const ptsStr = pts.map(p=>p.join(',')).join(' ');
+
+            svg += `<g data-rid="${rid}" data-fid="${fid}" class="room-poly" style="cursor:grab">`;
+            svg += `<polygon points="${ptsStr}" fill="${bg}" stroke="${isSelected ? (isDark?'#378add':'#185fa5') : border}" stroke-width="${isSelected?2.5:1}"/>`;
+
+            const maxChars = Math.max(3, Math.floor(bb.w / 7));
+            const name = r.name.length > maxChars ? r.name.slice(0, maxChars - 1) + '…' : r.name;
+            svg += `<text x="${bb.cx}" y="${bb.cy - (r.size||open?8:0)}" text-anchor="middle" font-size="12" font-weight="500" fill="${labelCol}" font-family="sans-serif" style="pointer-events:none">${esc(name)}</text>`;
+            if (r.size) {
+                svg += `<text x="${bb.cx}" y="${bb.cy + 8}" text-anchor="middle" font-size="10" fill="${textSec}" font-family="sans-serif" style="pointer-events:none">${esc(r.size)} m²</text>`;
+            }
+            if (open > 0) {
+                const bx = bb.x + bb.w - 18, by = bb.y + 6;
+                svg += `<circle cx="${bx}" cy="${by}" r="9" fill="${isDark?'#412402':'#faeeda'}" style="pointer-events:none"/>`;
+                svg += `<text x="${bx}" y="${by+4}" text-anchor="middle" font-size="9" font-weight="500" fill="${isDark?'#fac775':'#633806'}" font-family="sans-serif" style="pointer-events:none">${open}</text>`;
+            }
+            if (isSelected) {
+                pts.forEach((pt, pi) => {
+                    svg += `<circle cx="${pt[0]}" cy="${pt[1]}" r="6" fill="${isDark?'#378add':'#185fa5'}" stroke="white" stroke-width="1.5"
+          data-rid="${rid}" data-fid="${fid}" data-pi="${pi}" class="vertex-handle" style="cursor:crosshair"/>`;
+                });
+            }
+            svg += `</g>`;
+        });
+
+        svg += `<text x="${PLAN_W-8}" y="${PLAN_H-6}" text-anchor="end" font-size="9" fill="${textSec}" font-family="sans-serif">Grundriss · Ziehen=Verschieben · Ecke ziehen=Form ändern</text>`;
+        svg += `</svg>`;
+        return svg;
+    }
+
+    /* Install drag handlers after floor plan is inserted into DOM */
+    let _planDragCleanup = null; // holds cleanup fn for previous drag listeners
+
+    function initFloorPlanDrag(fid) {
+        // Clean up previous document-level listeners to avoid stacking
+        if (_planDragCleanup) { _planDragCleanup(); _planDragCleanup = null; }
+
+        const svg = document.getElementById('floor-plan-svg');
+        if (!svg) return;
+
+        let drag = null;
+
+        function svgPt(e) {
+            const rect = svg.getBoundingClientRect();
+            const scaleX = PLAN_W / rect.width, scaleY = PLAN_H / rect.height;
+            const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            return [cx * scaleX, cy * scaleY];
+        }
+
+        function start(e) {
+            const t = e.target;
+            if (t.classList.contains('vertex-handle')) {
+                e.preventDefault(); e.stopPropagation();
+                const rid = t.dataset.rid, fi = t.dataset.fid, pi = +t.dataset.pi;
+                const [sx, sy] = svgPt(e);
+                drag = {type:'vertex', rid, fi, pi,
+                    origPts: JSON.parse(JSON.stringify(state.apartments[fi].layout[rid].points)),
+                    sx, sy, lastDx: 0, lastDy: 0};
+            } else {
+                const g = t.closest('.room-poly');
+                if (!g) return;
+                e.preventDefault();
+                const rid = g.dataset.rid, fi = g.dataset.fid;
+                // First click just selects — don't start drag yet on unselected rooms
+                if (selectedRoom !== rid) {
+                    selectedRoom = rid;
+                    refreshFloorPlan(fi);
+                    refreshRoomsGrid(fi);
+                    renderRoomDetail(rid, fi);
+                    return;
+                }
+                const [sx, sy] = svgPt(e);
+                drag = {type:'room', rid, fi,
+                    origPts: JSON.parse(JSON.stringify(state.apartments[fi].layout[rid].points)),
+                    sx, sy, lastDx: 0, lastDy: 0};
+            }
+        }
+
+        function move(e) {
+            if (!drag) return;
+            e.preventDefault();
+            const [cx, cy] = svgPt(e);
+            const dx = Math.round((cx - drag.sx) / GRID) * GRID;
+            const dy = Math.round((cy - drag.sy) / GRID) * GRID;
+            if (dx === drag.lastDx && dy === drag.lastDy) return;
+            drag.lastDx = dx; drag.lastDy = dy;
+
+            // Compute new points
+            let newPts;
+            if (drag.type === 'room') {
+                newPts = drag.origPts.map(([px,py]) => [px+dx, py+dy]);
+            } else {
+                newPts = drag.origPts.map((pt, i) => i === drag.pi ? [pt[0]+dx, pt[1]+dy] : [...pt]);
+            }
+            state.apartments[drag.fi].layout[drag.rid].points = newPts;
+
+            // Update DOM in-place — no innerHTML replacement, listeners stay intact
+            const currentSvg = document.getElementById('floor-plan-svg');
+            if (!currentSvg) return;
+
+            // Update polygon points attribute
+            const grp = currentSvg.querySelector(`g[data-rid="${drag.rid}"]`);
+            if (grp) {
+                const poly = grp.querySelector('polygon');
+                if (poly) poly.setAttribute('points', newPts.map(p=>p.join(',')).join(' '));
+
+                // Update vertex handle positions
+                grp.querySelectorAll('.vertex-handle').forEach(c => {
+                    const pi = +c.dataset.pi;
+                    if (newPts[pi]) {
+                        c.setAttribute('cx', newPts[pi][0]);
+                        c.setAttribute('cy', newPts[pi][1]);
+                    }
+                });
+
+                // Update label/badge positions via bounding box
+                const bb = polyBBox(newPts);
+                grp.querySelectorAll('text').forEach(t => {
+                    const curX = +t.getAttribute('x'), curY = +t.getAttribute('y');
+                    // Recompute cx/cy offset relative to old bb
+                    t.setAttribute('x', bb.cx);
+                    // keep same y-offset from center
+                });
+                // Simpler: just rewrite the texts to new center
+                const texts = grp.querySelectorAll('text');
+                if (texts.length > 0) {
+                    texts.forEach(t => t.setAttribute('x', bb.cx));
+                }
+                // Badge circle
+                const circles = grp.querySelectorAll('circle:not(.vertex-handle)');
+                circles.forEach(c => {
+                    c.setAttribute('cx', bb.x + bb.w - 18);
+                    c.setAttribute('cy', bb.y + 6);
+                });
+            }
+        }
+
+        function end() {
+            if (!drag) return;
+            const fi = drag.fi;
+            drag = null;
+            saveState();
+            // Full redraw after drag ends to fix all labels/badges precisely
+            refreshFloorPlan(fi);
+        }
+
+        svg.addEventListener('mousedown', start);
+        svg.addEventListener('touchstart', start, {passive:false});
+        document.addEventListener('mousemove', move);
+        document.addEventListener('touchmove', move, {passive:false});
+        document.addEventListener('mouseup', end);
+        document.addEventListener('touchend', end);
+
+        _planDragCleanup = () => {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('touchmove', move);
+            document.removeEventListener('mouseup', end);
+            document.removeEventListener('touchend', end);
+        };
+    }
+
+    function refreshFloorPlan(fid) {
+        const wrap = document.getElementById('floor-plan-wrap');
+        if (wrap) {
+            wrap.innerHTML = drawFloorPlan(fid);
+            initFloorPlanDrag(fid);
+        }
+    }
+
+    function refreshRoomsGrid(fid) {
+        const grid = document.querySelector('.rooms-grid');
+        if (grid) grid.innerHTML = (state.apartments[fid].rooms||[]).map(r=>roomCard(r,fid)).join('');
+    }
+
+    function selectRoomFromPlan(rid, fid) {
+        selectedRoom = rid;
+        refreshFloorPlan(fid);
+        refreshRoomsGrid(fid);
+        renderRoomDetail(rid, fid);
+    }
+
+    function openRoomLayoutEditor(fid) {
+        ensureApt(fid);
+        ensureLayout(fid);
+        const apt = state.apartments[fid];
+        const rooms = apt.rooms || [];
+        const layout = apt.layout;
+
+        const modal = document.getElementById('layout-modal');
+        const body  = document.getElementById('layout-modal-body');
+
+        body.innerHTML = `
+    <p style="font-size:13px;color:var(--text2);margin-bottom:0.75rem">
+      Passe die Eckpunkte jedes Raums an. Jede Zeile ist ein Punkt (X, Y).
+      Du kannst Punkte hinzufügen oder entfernen – so entstehen beliebige Formen wie L-, T- oder Trapezräume.
+    </p>
+    <div id="poly-editor-rooms">
+      ${rooms.map(rid => {
+            ensureRoom(rid);
+            const r = state.rooms[rid];
+            const l = layout[rid] || { points: [[20,20],[140,20],[140,120],[20,120]] };
+            return renderPolyEditorRoom(rid, r.name, l.points, fid);
+        }).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:0.75rem">
+      <button class="primary" onclick="closeLayoutModal('${fid}')"><i class="ti ti-check"></i>Fertig</button>
+      <button onclick="resetLayout('${fid}')"><i class="ti ti-refresh"></i>Zurücksetzen</button>
+    </div>
+  `;
+        modal.style.display = 'flex';
+    }
+
+    function renderPolyEditorRoom(rid, name, points, fid) {
+        const rows = points.map((pt, pi) => `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px" id="ptrow-${rid}-${pi}">
+      <span style="font-size:11px;color:var(--text3);width:16px;text-align:right">${pi+1}</span>
+      <label style="display:flex;align-items:center;gap:3px;font-size:12px;margin:0">
+        X <input type="number" value="${pt[0]}" min="0" max="${PLAN_W}" step="${GRID}" style="width:60px"
+          onchange="updatePolyPoint('${fid}','${rid}',${pi},0,+this.value)"/>
+      </label>
+      <label style="display:flex;align-items:center;gap:3px;font-size:12px;margin:0">
+        Y <input type="number" value="${pt[1]}" min="0" max="${PLAN_H}" step="${GRID}" style="width:60px"
+          onchange="updatePolyPoint('${fid}','${rid}',${pi},1,+this.value)"/>
+      </label>
+      ${points.length > 3
+            ? `<button class="small" style="padding:2px 6px;font-size:11px" onclick="removePolyPoint('${fid}','${rid}',${pi})" title="Punkt entfernen"><i class="ti ti-minus"></i></button>`
+            : ''}
+    </div>`).join('');
+
+        return `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:500">${esc(name)}</span>
+      <div style="display:flex;gap:6px">
+        <button class="small" style="font-size:11px" onclick="addPolyPoint('${fid}','${rid}')"><i class="ti ti-plus"></i>Punkt</button>
+        <button class="small" style="font-size:11px" onclick="setRectShape('${fid}','${rid}')"><i class="ti ti-rectangle"></i>Rechteck</button>
+      </div>
+    </div>
+    <div id="ptrows-${rid}">${rows}</div>
+  </div>`;
+    }
+
+    function updatePolyPoint(fid, rid, pi, coord, val) {
+        ensureLayout(fid);
+        state.apartments[fid].layout[rid].points[pi][coord] = val;
+        saveState();
+        refreshFloorPlan(fid);
+    }
+
+    function addPolyPoint(fid, rid) {
+        ensureLayout(fid);
+        const pts = state.apartments[fid].layout[rid].points;
+        // Insert midpoint between last and first
+        const last = pts[pts.length-1], first = pts[0];
+        pts.push([Math.round((last[0]+first[0])/2/GRID)*GRID, Math.round((last[1]+first[1])/2/GRID)*GRID]);
+        saveState();
+        openRoomLayoutEditor(fid);
+        const planEl = document.getElementById('floor-plan-wrap');
+        if (planEl) planEl.innerHTML = drawFloorPlan(fid);
+    }
+
+    function removePolyPoint(fid, rid, pi) {
+        ensureLayout(fid);
+        const pts = state.apartments[fid].layout[rid].points;
+        if (pts.length <= 3) return;
+        pts.splice(pi, 1);
+        saveState();
+        openRoomLayoutEditor(fid);
+        refreshFloorPlan(fid);
+    }
+
+    function setRectShape(fid, rid) {
+        ensureLayout(fid);
+        const bb = polyBBox(state.apartments[fid].layout[rid].points);
+        state.apartments[fid].layout[rid].points = [
+            [bb.x, bb.y], [bb.x+bb.w, bb.y], [bb.x+bb.w, bb.y+bb.h], [bb.x, bb.y+bb.h]
+        ];
+        saveState();
+        openRoomLayoutEditor(fid);
+        refreshFloorPlan(fid);
+    }
+
+    function updateLayout(fid, rid, prop, val) {
+        // Legacy stub – no longer used (polygon editor replaced this)
+    }
+
+    function resetLayout(fid) {
+        const rooms = state.apartments[fid].rooms || [];
+        state.apartments[fid].layout = getDefaultLayout(rooms);
+        saveState();
+        openRoomLayoutEditor(fid);
+        refreshFloorPlan(fid);
+    }
+
+    function closeLayoutModal(fid) {
+        document.getElementById('layout-modal').style.display = 'none';
+        refreshFloorPlan(fid);
+    }
+
+    /* ════════════════════════════════
+       FLOOR VIEW
+    ════════════════════════════════ */
+    function renderFloor(main, fid) {
+        ensureApt(fid);
+        ensureLayout(fid);
+        const apt = state.apartments[fid];
+        const rooms = apt.rooms || [];
+
+        let roomsHTML = rooms.length === 0
+            ? `<p style="color:var(--text2);font-size:14px;padding:0.5rem 0">Noch keine Räume angelegt.</p>`
+            : `<div class="rooms-grid">${rooms.map(rid => roomCard(rid, fid)).join('')}</div>`;
+
+        main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h2>${esc(apt.name)}</h2>
+        <p>${floorLabel(fid)} · ${rooms.length} Räume</p>
+      </div>
+      <button onclick="showView('drawing')"><i class="ti ti-building"></i>Zum Haus</button>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="floor-header">
+        <h3>Grundriss</h3>
+        <div style="display:flex;gap:6px">
+          ${rooms.length > 0 ? `<button class="small" onclick="openRoomLayoutEditor('${fid}')"><i class="ti ti-layout-distribute-horizontal"></i>Layout anpassen</button>` : ''}
+        </div>
+      </div>
+      ${rooms.length === 0
+            ? `<p style="color:var(--text2);font-size:13px">Füge Räume hinzu, um den Grundriss zu sehen.</p>`
+            : `<div id="floor-plan-wrap" style="overflow-x:auto">${drawFloorPlan(fid)}</div>`
+        }
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="floor-header">
+        <h3>Räume</h3>
+        <div style="display:flex;gap:6px">
+          <button class="primary small" onclick="addRoom('${fid}')"><i class="ti ti-plus"></i>Raum hinzufügen</button>
+          ${rooms.length > 0 ? `<button class="small danger" onclick="deleteAllRooms('${fid}')"><i class="ti ti-trash"></i>Alle löschen</button>` : ''}
+        </div>
+      </div>
+      ${roomsHTML}
+    </div>
+
+    <div id="room-detail"></div>
+  `;
+
+        if (selectedRoom && rooms.includes(selectedRoom)) {
+            renderRoomDetail(selectedRoom, fid);
+        }
+        if (rooms.length > 0) setTimeout(() => initFloorPlanDrag(fid), 0);
+    }
+
+    function roomCard(rid, fid) {
+        ensureRoom(rid);
+        const r = state.rooms[rid];
+        const todos = state.todos[rid] || [];
+        const done  = todos.filter(t => t.done).length;
+        const open  = todos.length - done;
+        const ico   = roomIcon(r.name);
+        const active = selectedRoom === rid;
+        return `<div class="room-card${active?' active':''}" onclick="selectRoom('${rid}','${fid}')">
+    <div class="room-name"><i class="ti ${ico}" style="font-size:16px" aria-hidden="true"></i>${esc(r.name)}</div>
+    <div class="room-meta">
+      ${r.size ? `<span>${esc(r.size)} m²</span> · ` : ''}
+      ${todos.length > 0 ? `<span class="${open>0?'todo-open':'todo-done'}">${open>0?open+' offen':done+' erledigt'}</span>` : '<span>keine Aufgaben</span>'}
+    </div>
+  </div>`;
+    }
+
+    function selectRoom(rid, fid) {
+        selectedRoom = rid;
+        renderFloor(document.getElementById('main-content'), fid);
+    }
+
+    function renderRoomDetail(rid, fid) {
+        ensureRoom(rid);
+        const r = state.rooms[rid];
+        const todos = state.todos[rid] || [];
+        const done = todos.filter(t=>t.done).length;
+
+        const div = document.getElementById('room-detail');
+        if (!div) return;
+        div.innerHTML = `
+    <div class="card">
+      <div class="card-title">
+        <i class="ti ${roomIcon(r.name)}" aria-hidden="true"></i>
+        <span id="room-name-display">${esc(r.name)}</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button class="small" onclick="editRoom('${rid}','${fid}')"><i class="ti ti-edit"></i>Bearbeiten</button>
+          <button class="small danger" onclick="deleteRoom('${rid}','${fid}')"><i class="ti ti-trash"></i></button>
+        </span>
+      </div>
+
+      <div id="room-edit-form" style="display:none;margin-bottom:1rem">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div class="field" style="margin:0;flex:1;min-width:140px"><label>Raumname</label><input type="text" id="edit-room-name" value="${esc(r.name)}"/></div>
+          <div class="field" style="margin:0;width:80px"><label>Größe (m²)</label><input type="number" id="edit-room-size" value="${r.size||''}" min="1" style="width:80px"/></div>
+          <button class="primary small" onclick="saveRoom('${rid}','${fid}')"><i class="ti ti-check"></i>OK</button>
+          <button class="small" onclick="document.getElementById('room-edit-form').style.display='none'"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+        <span class="badge badge-blue" style="cursor:pointer" onclick="editRoom('${rid}','${fid}')" title="m² bearbeiten">
+          <i class="ti ti-ruler" aria-hidden="true" style="font-size:11px"></i>
+          ${r.size ? r.size + ' m²' : '<span style="opacity:0.6">m² eintragen</span>'}
+        </span>
+        <span class="badge badge-green"><i class="ti ti-checks" aria-hidden="true" style="font-size:11px"></i>${done} erledigt</span>
+        <span class="badge badge-amber"><i class="ti ti-circle-check" aria-hidden="true" style="font-size:11px"></i>${todos.length - done} offen</span>
+      </div>
+
+      <div style="font-size:14px;font-weight:500;margin-bottom:0.5rem">Aufgabenliste</div>
+      <div id="todo-list">${renderTodoList(rid)}</div>
+      <div class="todo-add">
+        <input type="text" id="todo-input-${rid}" placeholder="Neue Aufgabe…" onkeydown="if(event.key==='Enter')addTodo('${rid}','${fid}')"/>
+        <button class="primary" onclick="addTodo('${rid}','${fid}')"><i class="ti ti-plus"></i>Hinzufügen</button>
+      </div>
+    </div>`;
+    }
+
+    function renderTodoList(rid) {
+        const todos = state.todos[rid] || [];
+        if (todos.length === 0) return '<p style="color:var(--text2);font-size:13px;padding:0.5rem 0">Noch keine Aufgaben.</p>';
+        return todos.map((t,i) => `
+    <div class="todo-item">
+      <input type="checkbox" class="todo-check" ${t.done?'checked':''} onchange="toggleTodo('${rid}',${i})"/>
+      <span class="todo-text${t.done?' done':''}">${esc(t.text)}</span>
+      <button class="todo-del" onclick="deleteTodo('${rid}',${i})" aria-label="Aufgabe löschen"><i class="ti ti-trash" style="font-size:14px"></i></button>
+    </div>`).join('');
+    }
+
+    function addRoom(fid) {
+        ensureApt(fid);
+        const rid = nextId();
+        const count = (state.apartments[fid].rooms || []).length;
+        state.rooms[rid] = { name: DEFAULT_ROOMS[count] || 'Raum ' + (count+1), size: '' };
+        state.todos[rid] = [];
+        state.apartments[fid].rooms.push(rid);
+        delete state.apartments[fid].layout;
+        saveState();
+        selectedRoom = rid;
+        renderFloor(document.getElementById('main-content'), fid);
+        // Auto-open edit form so user can set name + m² right away
+        setTimeout(() => {
+            const form = document.getElementById('room-edit-form');
+            if (form) form.style.display = 'block';
+            const nameInput = document.getElementById('edit-room-name');
+            if (nameInput) { nameInput.focus(); nameInput.select(); }
+        }, 50);
+    }
+
+    function deleteAllRooms(fid) {
+        const rooms = state.apartments[fid].rooms || [];
+        if (rooms.length === 0) return;
+        if (!confirm(`Alle ${rooms.length} Räume dieser Etage und ihre Aufgaben löschen?`)) return;
+        for (const rid of rooms) {
+            delete state.rooms[rid];
+            delete state.todos[rid];
+        }
+        state.apartments[fid].rooms = [];
+        delete state.apartments[fid].layout;
+        selectedRoom = null;
+        saveState();
+        renderFloor(document.getElementById('main-content'), fid);
+    }
+
+    function editRoom(rid, fid) {
+        const form = document.getElementById('room-edit-form');
+        if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function saveRoom(rid, fid) {
+        const name = document.getElementById('edit-room-name').value.trim();
+        const size = document.getElementById('edit-room-size').value.trim();
+        if (name) state.rooms[rid].name = name;
+        state.rooms[rid].size = size;
+        saveState();
+        renderFloor(document.getElementById('main-content'), fid);
+        setTimeout(() => renderRoomDetail(rid, fid), 0);
+    }
+
+    function deleteRoom(rid, fid) {
+        if (!confirm('Raum und alle Aufgaben löschen?')) return;
+        state.apartments[fid].rooms = (state.apartments[fid].rooms || []).filter(r => r !== rid);
+        if (state.apartments[fid].layout) delete state.apartments[fid].layout[rid];
+        delete state.rooms[rid]; delete state.todos[rid];
+        selectedRoom = null;
+        saveState();
+        renderFloor(document.getElementById('main-content'), fid);
+    }
+
+    function addTodo(rid, fid) {
+        const inp = document.getElementById('todo-input-' + rid);
+        const text = inp ? inp.value.trim() : '';
+        if (!text) return;
+        state.todos[rid].push({ text, done: false });
+        inp.value = '';
+        saveState();
+        const tl = document.getElementById('todo-list');
+        if (tl) tl.innerHTML = renderTodoList(rid);
+        refreshRoomCard(rid, fid);
+    }
+
+    function toggleTodo(rid, idx) {
+        state.todos[rid][idx].done = !state.todos[rid][idx].done;
+        saveState();
+        const tl = document.getElementById('todo-list');
+        if (tl) tl.innerHTML = renderTodoList(rid);
+        refreshRoomCard(rid, fid_of(rid));
+    }
+
+    function deleteTodo(rid, idx) {
+        state.todos[rid].splice(idx, 1);
+        saveState();
+        const tl = document.getElementById('todo-list');
+        if (tl) tl.innerHTML = renderTodoList(rid);
+        refreshRoomCard(rid, fid_of(rid));
+    }
+
+    function fid_of(rid) {
+        for (const [fid, apt] of Object.entries(state.apartments)) {
+            if ((apt.rooms || []).includes(rid)) return fid;
+        }
+        return null;
+    }
+
+    function refreshRoomCard(rid, fid) {
+        if (!fid) return;
+        const existing = document.querySelector(`.room-card[onclick*="${rid}"]`);
+        if (existing) existing.outerHTML = roomCard(rid, fid);
+    }
+
+    /* ════════════════════════════════
+       TOAST
+    ════════════════════════════════ */
+    function showToast(msg) {
+        let t = document.getElementById('toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'toast';
+            t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r);padding:10px 16px;font-size:14px;z-index:999;box-shadow:none';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        clearTimeout(t._to);
+        t._to = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+    }
+
+    /* ════════════════════════════════
+       ESCAPE
+    ════════════════════════════════ */
+    function esc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ════════════════════════════════
+       INIT
+    ════════════════════════════════ */
+    for (const fid of getFloorIds()) ensureApt(fid);
+    buildSidebar();
+    showView(getFloorIds().length > 0 ? 'overview' : 'setup');
+</script>
+</body>
+</html>
